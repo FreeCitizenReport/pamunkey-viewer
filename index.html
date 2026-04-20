@@ -510,16 +510,17 @@ let RECORDS = [];
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(data => { RECORDS = data; RECORDS.sort(function(a, b) {
       // In-custody first, then canonical firstSeenAt DESC, bookDate DESC, jacket DESC (SORT_RULE.md)
-      var aHeld = !a.releaseDate;
-      var bHeld = !b.releaseDate;
-      if (aHeld !== bHeld) return aHeld ? -1 : 1;
+      // PERMANENT SORT RULE - canonical per ~/richmond-scraper/SORT_RULE.md.
+      // ORDER BY firstSeenAt DESC, bookDate DESC (numeric), jacket DESC (numeric). Do NOT add in-custody tier.
       var fa = a.firstSeenAt || '';
       var fb = b.firstSeenAt || '';
       if (fa !== fb) return fb.localeCompare(fa);
-      var ba = a.bookDate || '';
-      var bb = b.bookDate || '';
+      var ba = (a.bookDate || '').replace(/^(\d+)\/(\d+)\/(\d+)$/, '$3/$1/$2');
+      var bb = (b.bookDate || '').replace(/^(\d+)\/(\d+)\/(\d+)$/, '$3/$1/$2');
       if (ba !== bb) return bb.localeCompare(ba);
-      return (b.jacket || '').localeCompare(a.jacket || '');
+      var ja = parseInt(a.jacket, 10) || 0;
+      var jb = parseInt(b.jacket, 10) || 0;
+      return jb - ja;
     }); bar.style.width = '100%'; if (overlay) overlay.classList.add('hidden'); applyFilters(); preloadBlobs(); });
   }
   fetch('latest.json?v=' + Date.now())
